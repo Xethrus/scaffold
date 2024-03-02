@@ -6,7 +6,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -21,6 +20,11 @@
  *   REG_OKAY <id> WELCOME <nickname>
  *   REG_FAIL <error reason>
  *
+ *  Client sends REQUEST <api_key> <data_set>
+ *  Server responds either
+ *    ACESS_OKAY <nickname> ACCESSING <data_set>
+ *    ACESS_FAIL <error reason>
+ *
  * Server responds with this if bad command
  *   INVAL_CMD <message>
  */
@@ -32,13 +36,24 @@ void message_to_client(int fd, std::string message) {
   }
 }
 
-const std::unordered_set<std::string> API_KEYS{{"ballsnuts69"}};
+const std::unordered_set<std::string> API_KEYS{{"something_professional"}};
+const std::unordered_set<std::string> DATA_SETS{{"TEMP","AQI","HUMIDITY"}};
 
 void invalid_command(int fd, std::string extra_message) {
   std::stringstream m;
   m << "INVAL_CMD " << extra_message << "\n";
   std::string message{m.str()};
   message_to_client(fd, message);
+}
+
+void key_exist_in_set(const std::unordered_set<std::string> set_to_search, std::string key_to_find) {
+  if(set_to_search.find(key_to_find) != set_to_search.end()) {
+    std::cout << "VALID KEY" << std::endl;
+    return true;
+  } else {
+    std::cout << "INVALID KEY" << std::endl;
+    return true;
+  }
 }
 
 void handle_register(int fd, const std::string &command,
@@ -54,8 +69,25 @@ void handle_register(int fd, const std::string &command,
   std::string nickname =
       command.substr(next_pos + 1, command.size() - (next_pos + 1) - 1);
   std::cout << "NICKNAME: \"" << nickname << "\"\n";
-  if (API_KEYS.find(api_key) == API_KEYS.end()) {
+
+  key_exist_in_set(API_KEYS, api_key);
+}
+
+void handle_access(int fd, const std::string &command,
+                   std::size_t begin_pos) {
+  std::size_t next_pos = command.find(' ', begin_pos + 1);
+  if (next_pos == std::string::npos) {
+    invalid_command(fd, "USAGE ACCES <API_KEY> <DATA_SET>");
+    return;
   }
+  std::string api_key =
+    command_substr(begin_pos + 1, next_pos - (begin_pos + 1));
+  std::cout << "API KEY: \"" << api_key << "\"\n";
+  std::string data_set =
+      command.substr(next_pos + 1, command.size() - (next_pos + 1) - 1);
+  std::cout << "DATA SET: \"" << data_set << "\"\n";
+
+  key_exist_in_set(DATA_SETS, data_set);
 }
 
 void handle_connection(int fd) {
@@ -80,6 +112,11 @@ void handle_connection(int fd) {
     std::string cmd = command.substr(0, pos);
     if (cmd == "REGISTER") {
       handle_register(fd, command, pos);
+    } else {
+      invalid_command(fd, "UNDEFINED REQ_TYPE");
+    }
+    if (cmd == "ACCESS") {
+      handle_access(fd, command, pos);
     } else {
       invalid_command(fd, "UNDEFINED REQ_TYPE");
     }
