@@ -46,13 +46,13 @@ void invalid_command(int fd, std::string extra_message) {
   message_to_client(fd, message);
 }
 
-void key_exist_in_set(const std::unordered_set<std::string> set_to_search, std::string key_to_find) {
+bool key_exist_in_set(const std::unordered_set<std::string> set_to_search, std::string key_to_find) {
   if(set_to_search.find(key_to_find) != set_to_search.end()) {
     std::cout << "VALID KEY" << std::endl;
     return true;
   } else {
     std::cout << "INVALID KEY" << std::endl;
-    return true;
+    return false;
   }
 }
 
@@ -70,7 +70,7 @@ void handle_register(int fd, const std::string &command,
       command.substr(next_pos + 1, command.size() - (next_pos + 1) - 1);
   std::cout << "NICKNAME: \"" << nickname << "\"\n";
 
-  key_exist_in_set(API_KEYS, api_key);
+  bool process_status = key_exist_in_set(API_KEYS, api_key);
 }
 
 void handle_access(int fd, const std::string &command,
@@ -81,13 +81,12 @@ void handle_access(int fd, const std::string &command,
     return;
   }
   std::string api_key =
-    command_substr(begin_pos + 1, next_pos - (begin_pos + 1));
+    command.substr(begin_pos + 1, next_pos - (begin_pos + 1));
   std::cout << "API KEY: \"" << api_key << "\"\n";
   std::string data_set =
       command.substr(next_pos + 1, command.size() - (next_pos + 1) - 1);
   std::cout << "DATA SET: \"" << data_set << "\"\n";
-
-  key_exist_in_set(DATA_SETS, data_set);
+  bool process_status = key_exist_in_set(DATA_SETS, data_set);
 }
 
 void handle_connection(int fd) {
